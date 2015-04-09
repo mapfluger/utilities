@@ -1,1 +1,38 @@
-/Users/pflugerm/.gitconfig
+[http]
+	sslVerify = false
+[user]
+	name = Mark Pfluger
+	email = mark.pfluger@agilex.com
+[color]
+	ui = auto
+[color "branch"]
+  current = yellow black
+  local = yellow
+  remote = magenta
+[color "diff"]
+  meta = yellow bold
+  frag = magenta bold
+  old = red reverse
+  new = green reverse
+  whitespace = white reverse
+[color "status"]
+  added = yellow
+  changed = green
+  untracked = cyan reverse
+  branch = magenta
+[core]
+	editor = subl -w
+	excludesfile = /Users/pflugerm/.gitignore_global
+[push]
+	default = simple
+[difftool "sourcetree"]
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
+[mergetool "sourcetree"]
+	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
+[alias]
+	healthy-fetch = !git tag -d healthy-next && git fetch
+	healthy-pull = !git tag -d healthy-next && git fetch && git merge healthy-next^0
+	healthy-app-fetch = !git tag -d healthy-app-next && git fetch
+	healthy-app-pull = !git tag -d healthy-app-next && git fetch && git merge healthy-app-next^0
