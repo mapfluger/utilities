@@ -7,6 +7,7 @@ alias cd..="cd .."
 alias c="clear"
 alias ve='cd $ve'
 alias cdo='cd -'
+alias pull='git pull'
 #alias grep='grep --color=auto'
 export GREP_OPTIONS='--color=auto'
 export CLICOLOR=1
