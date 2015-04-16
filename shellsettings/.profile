@@ -49,3 +49,5 @@ set_prompt () {
     #PS1+='\u \W$(__git_ps1)\$ '
 }
 PROMPT_COMMAND='set_prompt'
+
+export RUBOCOPBYPASS=false
