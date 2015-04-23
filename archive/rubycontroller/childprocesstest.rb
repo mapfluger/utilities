@@ -1,7 +1,6 @@
 require './processmaker'
 #include ProcessMaker
-
-reader, writer = ProcessMaker.sub_process_connect
+reader, writer = ProcessMaker.child_process_connect
 
 sleep 1 + Random.rand(7)
 puts "#{$PROGRAM_NAME}, #{Process.pid} is closing now"

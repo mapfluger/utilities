@@ -1,4 +1,5 @@
 # require 'debugger'
+require 'timeout'
 class ProcessMaker
   attr_accessor :reader, :writer, :info
   def initialize(file_name)
@@ -11,26 +12,29 @@ class ProcessMaker
       exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno}">
     end
 
+    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true}
     # Parent code
     writer_child.close
     reader_child.close
     @writer.write "sent from parent process #{$PROGRAM_NAME}, #{Process.pid}\n"
     @writer.flush
-
-    from_child = @reader.gets
-    puts from_child
-
+    begin
+      status = Timeout::timeout(5) do
+        from_child = @reader.gets
+        puts from_child
+      end
+    rescue Timeout::Error => e
+      $stderr.puts "failed to connect to child for #{@info[:name]}, #{@info[:pid]}"
+      self.shut_down_link
+      raise e
+    end
     Thread.new {
       Process.waitpid(@info[:pid])
-      @reader.close unless @reader.closed?
-      @writer.close unless @writer.closed?
-      @info[:active] = false
+      self.shut_down_link
     }
-
-    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true}
   end
 
-  def self.sub_process_connect
+  def self.child_process_connect
     fail "No args!" if ARGV.length < 1
     arg = ARGV.last.to_s
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect1: #{f.fileno}" if  !f.closed? && f.fileno > 2}
@@ -58,19 +62,15 @@ class ProcessMaker
       Process.kill 0, @info[:pid]
     rescue Errno::ESRCH => rescue_var
       $stderr.puts "No such process for #{@info[:name]}, #{@info[:pid]}. Closing pipes if open"
-      @reader.close unless @reader.closed?
-      @writer.close unless @writer.closed?
+      self.shut_down_link
       return false
     end
-    puts Process.kill 0, @info[:pid]
-    puts @info[:pid]
     begin
       Process.kill signal, @info[:pid]
     rescue Errno::ESRCH => rescue_var
       $stderr.puts "Failed to kill child for #{@info[:name]}, #{@info[:pid]}"
       return false
     end
-
     @reader.close unless @reader.closed?
     @writer.close unless @writer.closed?
     puts "Closed #{@info[:name]}, #{@info[:pid]}"
@@ -81,10 +81,16 @@ class ProcessMaker
       Process.kill 0, @info[:pid]
     rescue Errno::ESRCH => rescue_var
       $stderr.puts "No such process for #{@info[:name]}, #{@info[:pid]}. Closing pipes if open"
-      @reader.close unless @reader.closed?
-      @writer.close unless @writer.closed?
+      self.shut_down_link
       return false
     end
+    return true
+  end
+
+  def shut_down_link
+    @reader.close unless @reader.closed?
+    @writer.close unless @writer.closed?
+    @info[:active] = false
     return true
   end
 end
