@@ -1,8 +1,11 @@
 require './processmaker'
-include ProcessMaker
+#include ProcessMaker
 
-reader, writer = sub_process_connect
-sleep 20
+reader, writer = ProcessMaker.sub_process_connect
+sleep 5
+puts "#{$PROGRAM_NAME}, #{Process.pid} is closing now"
+reader.close
+writer.close
 # def hello(source, expect_input)
 #   puts "[child] Hello from #{source}"
 #   if expect_input
