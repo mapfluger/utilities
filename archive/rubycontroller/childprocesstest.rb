@@ -2,8 +2,10 @@ require './processmaker'
 #include ProcessMaker
 
 reader, writer = ProcessMaker.sub_process_connect
-sleep 5
+
+sleep 1 + Random.rand(7)
 puts "#{$PROGRAM_NAME}, #{Process.pid} is closing now"
+$stdout.flush
 reader.close
 writer.close
 # def hello(source, expect_input)
