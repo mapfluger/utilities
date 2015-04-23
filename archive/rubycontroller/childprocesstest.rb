@@ -1,4 +1,4 @@
-require './PDPAaRjeg'
+require './processmaker'
 include ProcessMaker
 
 reader, writer = sub_process_connect
