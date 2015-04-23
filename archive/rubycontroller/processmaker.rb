@@ -53,16 +53,16 @@ end
 
 if $PROGRAM_NAME == __FILE__
   include ProcessMaker
-  return_values = process_initialize("juGUhGExzxQ.rb")
+  return_values = process_initialize("childprocesstest.rb")
   puts return_values
   reader, writer = parent_process_connect return_values
-  return_values2 = process_initialize("juGUhGExzxQ.rb")
+  return_values2 = process_initialize("childprocesstest.rb")
   puts return_values2
-  return_values3 = process_initialize("juGUhGExzxQ.rb")
+  return_values3 = process_initialize("childprocesstest.rb")
   puts return_values3
-  return_values4 = process_initialize("juGUhGExzxQ.rb")
+  return_values4 = process_initialize("childprocesstest.rb")
   puts return_values4
-  return_values5 = process_initialize("juGUhGExzxQ.rb")
+  return_values5 = process_initialize("childprocesstest.rb")
   puts return_values5
   # ObjectSpace.each_object(IO) { |f| puts "parentfinal: #{f.fileno}" unless f.closed? || f.fileno <= 2}
 end
