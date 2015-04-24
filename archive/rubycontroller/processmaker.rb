@@ -2,7 +2,7 @@
 require 'timeout'
 class ProcessMaker
   attr_accessor :reader, :writer, :info
-  def initialize(file_name, keep_alive = false)
+  def initialize(file_name, keep_alive = false, temp = false)
     @reader, writer_child = IO.pipe
     reader_child, @writer = IO.pipe
 
@@ -12,7 +12,7 @@ class ProcessMaker
       exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno}">
     end
 
-    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true, keep_alive: keep_alive}
+    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true, keep_alive: keep_alive, temp: temp}
 
     writer_child.close
     reader_child.close
@@ -28,24 +28,26 @@ class ProcessMaker
       self.shut_down_link
       raise e
     end
-    self.waiter
+    self.waiter unless temp
   end
 
   def waiter
     Thread.new do
       Process.waitpid(@info[:pid])
+      puts "THREADS: #{Thread.list.count}"
       if @info[:keep_alive]
-        temp = ProcessMaker.new(@info[:name], true)
+        temp = ProcessMaker.new(@info[:name], true, true)
         @reader.close unless @reader.closed?
         @writer.close unless @writer.closed?
         @reader = temp.reader
         @writer = temp.writer
         @info = temp.info
+        @info[:temp] = false
         puts "keeping alive now: #{@info[:name]}, #{@info[:pid]}"
         temp = nil
         self.waiter
       else
-        puts "shutting down"
+        puts "shutting down #{@info[:name]}, #{@info[:pid]}"
         self.shut_down_link
       end
     end
@@ -152,6 +154,24 @@ if $PROGRAM_NAME == __FILE__
   ObjectSpace.each_object(IO) { |f| puts "8: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "9: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "7: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "8: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "9: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "10: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "11: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "12: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "13: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "14: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "15: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
 
   puts test2.status
