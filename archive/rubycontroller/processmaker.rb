@@ -1,8 +1,8 @@
-# require 'debugger'
+#require 'debugger'
 require 'timeout'
 class ProcessMaker
   attr_accessor :reader, :writer, :info
-  def initialize(file_name)
+  def initialize(file_name, keep_alive = false)
     @reader, writer_child = IO.pipe
     reader_child, @writer = IO.pipe
 
@@ -12,8 +12,8 @@ class ProcessMaker
       exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno}">
     end
 
-    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true}
-    # Parent code
+    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true, keep_alive: keep_alive}
+
     writer_child.close
     reader_child.close
     @writer.write "sent from parent process #{$PROGRAM_NAME}, #{Process.pid}\n"
@@ -28,18 +28,34 @@ class ProcessMaker
       self.shut_down_link
       raise e
     end
-    Thread.new {
+    self.waiter
+  end
+
+  def waiter
+    Thread.new do
       Process.waitpid(@info[:pid])
-      self.shut_down_link
-    }
+      if @info[:keep_alive]
+        temp = ProcessMaker.new(@info[:name], true)
+        @reader.close unless @reader.closed?
+        @writer.close unless @writer.closed?
+        @reader = temp.reader
+        @writer = temp.writer
+        @info = temp.info
+        puts "keeping alive now: #{@info[:name]}, #{@info[:pid]}"
+        temp = nil
+        self.waiter
+      else
+        puts "shutting down"
+        self.shut_down_link
+      end
+    end
   end
 
   def self.child_process_connect
     fail "No args!" if ARGV.length < 1
-    arg = ARGV.last.to_s
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect1: #{f.fileno}" if  !f.closed? && f.fileno > 2}
-    reader = IO.new(arg.split(',')[0].to_i)
-    writer  = IO.new(arg.split(',')[1].to_i)
+    reader = IO.new(ARGV.last.to_s.split(',')[0].to_i)
+    writer  = IO.new(ARGV.last.to_s.split(',')[1].to_i)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -60,26 +76,26 @@ class ProcessMaker
   def close(signal = 9)
     begin
       Process.kill 0, @info[:pid]
-    rescue Errno::ESRCH => rescue_var
+    rescue Errno::ESRCH => e
       $stderr.puts "No such process for #{@info[:name]}, #{@info[:pid]}. Closing pipes if open"
       self.shut_down_link
       return false
     end
     begin
       Process.kill signal, @info[:pid]
-    rescue Errno::ESRCH => rescue_var
+    rescue Errno::ESRCH => e
       $stderr.puts "Failed to kill child for #{@info[:name]}, #{@info[:pid]}"
       return false
     end
-    @reader.close unless @reader.closed?
-    @writer.close unless @writer.closed?
+    self.shut_down_link
     puts "Closed #{@info[:name]}, #{@info[:pid]}"
+    return true
   end
 
   def status
     begin
       Process.kill 0, @info[:pid]
-    rescue Errno::ESRCH => rescue_var
+    rescue Errno::ESRCH => e
       $stderr.puts "No such process for #{@info[:name]}, #{@info[:pid]}. Closing pipes if open"
       self.shut_down_link
       return false
@@ -102,7 +118,7 @@ if $PROGRAM_NAME == __FILE__
   puts return_values1.info
   reader, writer = return_values1.parent_process_connect  # example of parent connections
   # puts "reader autoclose: #{reader.autoclose?}"
-  return_values2 = ProcessMaker.new("childprocesstest.rb")
+  return_values2 = ProcessMaker.new("childprocesstest.rb", true)
   puts return_values2.info
   return_values3 = ProcessMaker.new("childprocesstest.rb")
   puts return_values3.info
@@ -120,9 +136,7 @@ if $PROGRAM_NAME == __FILE__
   # puts `ps aux | grep ruby`
   puts test1.info
   test2 =  test1.restart_child
-  puts 'before '
   puts test2.info
-  puts 'here'
   ObjectSpace.each_object(IO) { |f| puts "parentfinal2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
   #sleep 20
   ObjectSpace.each_object(IO) { |f| puts "3: #{f.fileno}" if !f.closed? && f.fileno > 2}
@@ -132,6 +146,12 @@ if $PROGRAM_NAME == __FILE__
   ObjectSpace.each_object(IO) { |f| puts "5: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "6: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "7: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "8: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 2
+  ObjectSpace.each_object(IO) { |f| puts "9: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
 
   puts test2.status

@@ -1,5 +1,5 @@
 require './processmaker'
-#include ProcessMaker
+
 reader, writer = ProcessMaker.child_process_connect
 
 sleep 1 + Random.rand(7)
