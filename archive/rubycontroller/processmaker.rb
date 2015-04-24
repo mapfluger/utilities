@@ -38,7 +38,7 @@ class ProcessMaker
     Thread.new do
       Process.waitpid(@info[:pid])
       puts "THREADS: #{Thread.list.count}"
-      if @info[:keep_alive] #&& @info[:active]
+      if @info[:keep_alive] && @info[:active]
         temp = ProcessMaker.new(@info[:name], true, true)
         @reader.close unless @reader.closed?
         @writer.close unless @writer.closed?
@@ -132,7 +132,7 @@ if $PROGRAM_NAME == __FILE__
   # puts "reader autoclose: #{reader.autoclose?}"
   return_values2 = ProcessMaker.new("childprocesstest.rb", true)
   puts return_values2.info
-  return_values3 = ProcessMaker.new("childprocesstest.rb")
+  return_values3 = ProcessMaker.new("childprocesstest.rb", true)
   puts return_values3.info
   return_values4 = ProcessMaker.new("childprocesstest.rb")
   puts return_values4.info
@@ -165,12 +165,6 @@ if $PROGRAM_NAME == __FILE__
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "9: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
-  ObjectSpace.each_object(IO) { |f| puts "7: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 2
-  ObjectSpace.each_object(IO) { |f| puts "8: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 2
-  ObjectSpace.each_object(IO) { |f| puts "9: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 2
   ObjectSpace.each_object(IO) { |f| puts "10: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "11: #{f.fileno}" if !f.closed? && f.fileno > 2}
@@ -178,13 +172,23 @@ if $PROGRAM_NAME == __FILE__
   ObjectSpace.each_object(IO) { |f| puts "12: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "13: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  return_values2.info[:keep_alive] = false # option to let child die
+  return_values3.close # kills child
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "14: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "15: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 2
+  sleep 3
+  ObjectSpace.each_object(IO) { |f| puts "16: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 3
+  ObjectSpace.each_object(IO) { |f| puts "17: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 3
+  ObjectSpace.each_object(IO) { |f| puts "18: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  sleep 3
 
   puts test2.status
+  puts return_values3.status
+  puts return_values3.status
   # puts `ps aux | grep ruby`
   $stdout.flush
   ObjectSpace.each_object(IO) { |f| puts "parentfinal3: #{f.fileno}" if !f.closed? && f.fileno > 2}
