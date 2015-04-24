@@ -1,21 +1,24 @@
 #require 'debugger'
 require 'timeout'
 class ProcessMaker
-  attr_accessor :reader, :writer, :info
+  attr_accessor :reader, :writer, :readstderr, :info
   def initialize(file_name, keep_alive = false, temp = false)
     @reader, writer_child = IO.pipe
     reader_child, @writer = IO.pipe
+    @readstderr, write_stderr = IO.pipe
 
     pid = fork do
       @reader.close
       @writer.close
-      exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno}">
+      @readstderr.close
+      exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno},#{write_stderr.fileno}">
     end
 
     @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true, keep_alive: keep_alive, temp: temp}
 
     writer_child.close
     reader_child.close
+    write_stderr.close
     @writer.write "sent from parent process #{$PROGRAM_NAME}, #{Process.pid}\n"
     @writer.flush
     begin
@@ -35,12 +38,14 @@ class ProcessMaker
     Thread.new do
       Process.waitpid(@info[:pid])
       puts "THREADS: #{Thread.list.count}"
-      if @info[:keep_alive]
+      if @info[:keep_alive] #&& @info[:active]
         temp = ProcessMaker.new(@info[:name], true, true)
         @reader.close unless @reader.closed?
         @writer.close unless @writer.closed?
+        @readstderr.close unless @readstderr.closed?
         @reader = temp.reader
         @writer = temp.writer
+        @readstderr = temp.readstderr
         @info = temp.info
         @info[:temp] = false
         puts "keeping alive now: #{@info[:name]}, #{@info[:pid]}"
@@ -56,8 +61,12 @@ class ProcessMaker
   def self.child_process_connect
     fail "No args!" if ARGV.length < 1
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect1: #{f.fileno}" if  !f.closed? && f.fileno > 2}
+    puts ARGV
+    puts "ARGV: #{ARGV.last.to_s.split(',')[0].to_i}, #{ARGV.last.to_s.split(',')[1].to_i}, #{ARGV.last.to_s.split(',')[2].to_i}"
     reader = IO.new(ARGV.last.to_s.split(',')[0].to_i)
     writer  = IO.new(ARGV.last.to_s.split(',')[1].to_i)
+    new_stderr  = IO.new(ARGV.last.to_s.split(',')[2].to_i)
+    $stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -108,6 +117,7 @@ class ProcessMaker
   def shut_down_link
     @reader.close unless @reader.closed?
     @writer.close unless @writer.closed?
+    @readstderr.close unless @readstderr.closed?
     @info[:active] = false
     return true
   end
