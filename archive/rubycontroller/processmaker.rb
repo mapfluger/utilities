@@ -1,21 +1,20 @@
 #require 'debugger'
 require 'timeout'
 class ProcessMaker
-  attr_accessor :reader, :writer, :readstderr, :info
+  attr_accessor :reader, :writer, :read_stderr, :info
   def initialize(file_name, keep_alive = false, temp = false)
     @reader, writer_child = IO.pipe
     reader_child, @writer = IO.pipe
-    @readstderr, write_stderr = IO.pipe
+    @read_stderr, write_stderr = IO.pipe
 
     pid = fork do
       @reader.close
       @writer.close
-      @readstderr.close
+      @read_stderr.close
       exec %Q<ruby ./#{file_name} "#{reader_child.fileno},#{writer_child.fileno},#{write_stderr.fileno}">
     end
 
-    @info = {name: file_name, pid: pid, parent_writer: @writer, parent_reader: @reader, active: true, keep_alive: keep_alive, temp: temp}
-
+    @info = {name: file_name, pid: pid, active: true, keep_alive: keep_alive, temp: temp}
     writer_child.close
     reader_child.close
     write_stderr.close
@@ -40,15 +39,16 @@ class ProcessMaker
       puts "THREADS: #{Thread.list.count}"
       if @info[:keep_alive] && @info[:active]
         temp = ProcessMaker.new(@info[:name], true, true)
+        oldpid = @info[:pid]
         @reader.close unless @reader.closed?
         @writer.close unless @writer.closed?
-        @readstderr.close unless @readstderr.closed?
+        @read_stderr.close unless @read_stderr.closed?
         @reader = temp.reader
         @writer = temp.writer
-        @readstderr = temp.readstderr
+        @read_stderr = temp.read_stderr
         @info = temp.info
         @info[:temp] = false
-        puts "keeping alive now: #{@info[:name]}, #{@info[:pid]}"
+        puts "keeping alive now: #{@info[:name]}, new: #{@info[:pid]} old: #{oldpid}"
         temp = nil
         self.waiter
       else
@@ -117,7 +117,7 @@ class ProcessMaker
   def shut_down_link
     @reader.close unless @reader.closed?
     @writer.close unless @writer.closed?
-    @readstderr.close unless @readstderr.closed?
+    @read_stderr.close unless @read_stderr.closed?
     @info[:active] = false
     return true
   end
@@ -191,6 +191,6 @@ if $PROGRAM_NAME == __FILE__
   puts return_values3.status
   # puts `ps aux | grep ruby`
   $stdout.flush
-  ObjectSpace.each_object(IO) { |f| puts "parentfinal3: #{f.fileno}" if !f.closed? && f.fileno > 2}
+  ObjectSpace.each_object(IO) { |f| puts "parentfinal19: #{f.fileno}" if !f.closed? && f.fileno > 2}
   $stdout.flush
 end
