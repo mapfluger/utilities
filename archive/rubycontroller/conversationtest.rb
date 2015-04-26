@@ -7,18 +7,11 @@ $stdout.flush
 count = 0
 while true do
   begin
-    status = Timeout::timeout(10) do
-      #lps.interval = 0.01
+    status = Timeout::timeout(5) do
       begin 
-        hash = reader.gets
-        #hash = reader.gets
-        #puts hash
-        #puts "YES!" if hash.to_i == Time.now.to_i
-        #puts "child: #{hash.to_i} #{Time.now.to_i}"   
+        hash = reader.gets 
       end while hash.to_i != Time.now.to_i
-      writer.write "#{Time.now.to_i}\n"
-      #lps.interval = 4
-     # puts "child: #{hash} #{Time.now.to_i}"
+      writer.write "1ack#{count}\n"
       puts reader.gets
       writer.write "2ack#{count}\n"
       puts reader.gets

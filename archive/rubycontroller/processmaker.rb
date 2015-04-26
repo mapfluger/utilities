@@ -204,6 +204,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   tester = ProcessMaker.new("conversationtest.rb", true)
   puts tester.info
   count = 0
+  tries = 0
   LPS.interval(4).loop do
     begin
       status = Timeout::timeout(1) do
@@ -212,14 +213,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
         else
           tester.writer.write "#{Time.new.to_i}\n"
         end
-        hash = tester.reader.gets
-        puts "parent: #{hash.to_i} #{Time.now.to_i}"
-        #if hash.to_i != Time.now.to_i
-        #  puts "I am not in sync with my parent!"
-        #  tester.reader.flush
-        #  tester.writer.flush
-        #  next
-        #end
+        puts = tester.reader.gets
         tester.writer.write "status#{count}\n"
         puts tester.reader.gets
         tester.writer.write "threshold#{count}\n"
@@ -230,12 +224,15 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
       end
     rescue Timeout::Error => e
       $stderr.puts "failed to connect to child for #{tester.info[:name]}, #{tester.info[:pid]}"
-      #tester.shut_down_link
       tester.writer.write "#{Time.new.to_i}\n"
-      tester.reader.flush
-      tester.writer.flush
-      retry
-      raise e
+      tries += 1
+      if tries <= 10
+        puts "tries #{tries}"
+        retry
+      else
+        tester.close
+        raise e
+      end
     end
     # sleep 10
   end
