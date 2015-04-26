@@ -11,7 +11,8 @@ pid = fork do
   ObjectSpace.each_object(IO) { |f| puts "childpre: #{f.fileno}" unless f.closed? || f.fileno <= 2}
   require_relative 'juGUhGExzxQ'
   sleep 1
-  exec %Q</opt/chef/embedded/bin/ruby -r ./juGUhGExzxQ.rb -e 'hello("#{reader2.fileno},#{writer1.fileno}", true)'>
+  exec %Q</opt/chef/embedded/bin/ruby -r ./juGUhGExzxQ.rb>
+  #exec %Q</opt/chef/embedded/bin/ruby -r ./juGUhGExzxQ.rb -e 'hello("#{reader2.fileno},#{writer1.fileno}", true)'>
 end
 #test = {name: 'no'}
 # Parent code

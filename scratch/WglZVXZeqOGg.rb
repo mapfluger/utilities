@@ -43,8 +43,8 @@ if $PROGRAM_NAME == __FILE__
       puts pid
       puts "---"
       sleep 1
-      puts "Killing subprocess2"
-      Process.kill(9, pid)
+    #  puts "Killing subprocess2"
+   #   Process.kill(9, pid)
     end
   rescue Timeout::Error
     Process.kill 9, pid

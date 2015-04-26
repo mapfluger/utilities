@@ -6,7 +6,9 @@ class ProcessMaker
     @reader, writer_child = IO.pipe
     reader_child, @writer = IO.pipe
     @read_stderr, write_stderr = IO.pipe
-
+    @reader.sync = true
+    @writer.sync = true
+    @read_stderr.sync = true
     pid = fork do
       @reader.close
       @writer.close
@@ -66,6 +68,8 @@ class ProcessMaker
     reader = IO.new(ARGV.last.to_s.split(',')[0].to_i)
     writer  = IO.new(ARGV.last.to_s.split(',')[1].to_i)
     new_stderr  = IO.new(ARGV.last.to_s.split(',')[2].to_i)
+    reader.sync = true
+    writer.sync = true
     $stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
@@ -124,7 +128,8 @@ class ProcessMaker
 end
 
 # test code!
-if $PROGRAM_NAME == __FILE__
+if $PROGRAM_NAME == __FILE__ && ARGV.length == 0
+  puts 'Basic test suite'
   #include ProcessMaker
   return_values1 = ProcessMaker.new("childprocesstest.rb")
   puts return_values1.info
@@ -193,4 +198,21 @@ if $PROGRAM_NAME == __FILE__
   $stdout.flush
   ObjectSpace.each_object(IO) { |f| puts "parentfinal19: #{f.fileno}" if !f.closed? && f.fileno > 2}
   $stdout.flush
+elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
+  require 'lps'
+  puts 'Conversation test suite'
+  tester = ProcessMaker.new("conversationtest.rb", true)
+  puts tester.info
+  LPS.interval(4).loop do
+    tester.writer.write "check in on child\n"
+    puts tester.reader.gets
+    tester.writer.write "status\n"
+    puts tester.reader.gets
+    tester.writer.write "threshold\n"
+    puts tester.reader.gets
+    tester.writer.write "frequency\n"
+    puts tester.reader.gets
+
+   # sleep 10
+  end
 end
