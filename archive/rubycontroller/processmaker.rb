@@ -70,7 +70,7 @@ class ProcessMaker
     new_stderr  = IO.new(ARGV.last.to_s.split(',')[2].to_i)
     reader.sync = true
     writer.sync = true
-    $stderr.reopen(new_stderr)
+    #$stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -203,16 +203,40 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   puts 'Conversation test suite'
   tester = ProcessMaker.new("conversationtest.rb", true)
   puts tester.info
+  count = 0
   LPS.interval(4).loop do
-    tester.writer.write "check in on child\n"
-    puts tester.reader.gets
-    tester.writer.write "status\n"
-    puts tester.reader.gets
-    tester.writer.write "threshold\n"
-    puts tester.reader.gets
-    tester.writer.write "frequency\n"
-    puts tester.reader.gets
-
-   # sleep 10
+    begin
+      status = Timeout::timeout(1) do
+        if count == 3 || count == 4 || count == 6 
+          tester.writer.write "#{Time.new.to_i + 3}\n"
+        else
+          tester.writer.write "#{Time.new.to_i}\n"
+        end
+        hash = tester.reader.gets
+        puts "parent: #{hash.to_i} #{Time.now.to_i}"
+        #if hash.to_i != Time.now.to_i
+        #  puts "I am not in sync with my parent!"
+        #  tester.reader.flush
+        #  tester.writer.flush
+        #  next
+        #end
+        tester.writer.write "status#{count}\n"
+        puts tester.reader.gets
+        tester.writer.write "threshold#{count}\n"
+        puts tester.reader.gets
+        tester.writer.write "frequency#{count}\n"
+        puts tester.reader.gets
+        count += 1
+      end
+    rescue Timeout::Error => e
+      $stderr.puts "failed to connect to child for #{tester.info[:name]}, #{tester.info[:pid]}"
+      #tester.shut_down_link
+      tester.writer.write "#{Time.new.to_i}\n"
+      tester.reader.flush
+      tester.writer.flush
+      retry
+      raise e
+    end
+    # sleep 10
   end
 end
