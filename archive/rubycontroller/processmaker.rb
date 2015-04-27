@@ -40,24 +40,28 @@ class ProcessMaker
       Process.waitpid(@info[:pid])
       puts "THREADS: #{Thread.list.count}"
       if @info[:keep_alive] && @info[:active]
-        temp = ProcessMaker.new(@info[:name], true, true)
-        oldpid = @info[:pid]
-        @reader.close unless @reader.closed?
-        @writer.close unless @writer.closed?
-        @read_stderr.close unless @read_stderr.closed?
-        @reader = temp.reader
-        @writer = temp.writer
-        @read_stderr = temp.read_stderr
-        @info = temp.info
-        @info[:temp] = false
-        puts "keeping alive now: #{@info[:name]}, new: #{@info[:pid]} old: #{oldpid}"
-        temp = nil
+        self.reset
         self.waiter
       else
         puts "shutting down #{@info[:name]}, #{@info[:pid]}"
-        self.shut_down_link
+        self.close # maybe just shutdownlink?
       end
     end
+  end
+
+  def reset
+    temp = ProcessMaker.new(@info[:name], true, true)
+    oldpid = @info[:pid]
+    @reader.close unless @reader.closed?
+    @writer.close unless @writer.closed?
+    @read_stderr.close unless @read_stderr.closed?
+    @reader = temp.reader
+    @writer = temp.writer
+    @read_stderr = temp.read_stderr
+    @info = temp.info
+    @info[:temp] = false
+    puts "keeping alive now: #{@info[:name]}, new: #{@info[:pid]} old: #{oldpid}"
+    temp = nil
   end
 
   def self.child_process_connect
@@ -183,13 +187,13 @@ if $PROGRAM_NAME == __FILE__ && ARGV.length == 0
   ObjectSpace.each_object(IO) { |f| puts "14: #{f.fileno}" if !f.closed? && f.fileno > 2}
   sleep 2
   ObjectSpace.each_object(IO) { |f| puts "15: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 3
+  sleep 2
   ObjectSpace.each_object(IO) { |f| puts "16: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 3
+  sleep 2
   ObjectSpace.each_object(IO) { |f| puts "17: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 3
+  sleep 2
   ObjectSpace.each_object(IO) { |f| puts "18: #{f.fileno}" if !f.closed? && f.fileno > 2}
-  sleep 3
+  sleep 2
 
   puts test2.status
   puts return_values3.status
@@ -208,7 +212,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   LPS.interval(4).loop do
     begin
       status = Timeout::timeout(1) do
-        if count == 3 || count == 4 || count == 6 
+        if count == 3 || count == 4 || count == 6
           tester.writer.write "#{Time.new.to_i + 3}\n"
         else
           tester.writer.write "#{Time.new.to_i}\n"
@@ -230,7 +234,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
         puts "tries #{tries}"
         retry
       else
-        tester.close
+        tester.close # probably restart in practice
         raise e
       end
     end
