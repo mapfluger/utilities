@@ -29,7 +29,7 @@ class ProcessMaker
       end
     rescue Timeout::Error => e
       $stderr.puts "failed to connect to child for #{@info[:name]}, #{@info[:pid]}"
-      self.shut_down_link
+      self.close
       raise e
     end
     self.waiter unless temp
@@ -44,7 +44,7 @@ class ProcessMaker
         self.waiter
       else
         puts "shutting down #{@info[:name]}, #{@info[:pid]}"
-        self.close # maybe just shutdownlink?
+        self.close # maybe just shutdownlink
       end
     end
   end
