@@ -164,26 +164,27 @@ class ProcessMaker
     end
   end
 
-  def self.child_converstation(reader, writer, quantity)
+  def self.child_converstation(reader, writer, quantity, timeout_val = 5)
     return_val = Array.new
     begin
-     status = Timeout::timeout(5) do
-      begin 
-        hash = reader.gets 
-        puts "hash: #{hash}"
-      end while hash.to_i != Time.now.to_i
-      writer.write "ack#{Time.new.to_i}\n"
-      quantity.times do
-        verify = reader.gets
-        return_val << verify
-        writer.write "ack#{verify}"
+      status = Timeout::timeout(timeout_val) do
+        begin
+          time = reader.gets
+          puts "time: #{time}"
+        end while time.to_i != Time.now.to_i
+        writer.write "ack#{Time.new.to_i}\n"
+        quantity.times do
+          verify = reader.gets
+          return_val << verify[0...-1]
+          writer.write "ack#{verify}"
+        end
       end
+    rescue Timeout::Error => e
+      $stderr.puts "failed to connect parent"
+      retry
+      raise e
     end
-  rescue Timeout::Error => e
-    $stderr.puts "failed to connect parent"
-    retry
-    raise e
-  end
+    return return_val
   end
 end
 

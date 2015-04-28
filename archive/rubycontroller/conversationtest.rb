@@ -5,7 +5,8 @@ reader, writer = ProcessMaker.child_process_connect
 puts "#{$PROGRAM_NAME}, #{Process.pid} is starting now"
 $stdout.flush
 while true do
-  ProcessMaker.child_converstation(reader, writer, 3)
+  value = ProcessMaker.child_converstation(reader, writer, 3)
+  p value
   # begin
   #   status = Timeout::timeout(5) do
   #     begin 
