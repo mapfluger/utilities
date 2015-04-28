@@ -76,7 +76,7 @@ class ProcessMaker
     new_stderr.sync = true
     reader.sync = true
     writer.sync = true
-    #$stderr.reopen(new_stderr)
+    $stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -164,7 +164,7 @@ class ProcessMaker
     end
   end
 
-  def self.child_converstation(reader, writer, quantity, timeout_val = 5)
+  def self.child_converstation(reader, writer, quantity, timeout_val = 30)
     return_val = Array.new
     begin
       status = Timeout::timeout(timeout_val) do
@@ -175,7 +175,7 @@ class ProcessMaker
         writer.write "ack#{Time.new.to_i}\n"
         quantity.times do
           verify = reader.gets
-          return_val << verify[0...-1]
+          return_val << verify[0..-2]
           writer.write "ack#{verify}"
         end
       end
