@@ -76,7 +76,7 @@ class ProcessMaker
     new_stderr.sync = true
     reader.sync = true
     writer.sync = true
-    $stderr.reopen(new_stderr)
+    #$stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -132,21 +132,21 @@ class ProcessMaker
     return true
   end
 
-  def conversation(conversation_array)
+  def parent_conversation(conversation_array)
     tries = 0
     begin
       status = Timeout::timeout(1) do
-        puts "start"
-      #  begin
+        begin
           self.writer.write "#{Time.new.to_i}\n"
           verify = self.reader.gets
           puts "verify: #{verify}"
-       # end while verify != "#{Time.new.to_i}ack\n"
-        puts "success"
+        end while verify != "ack#{Time.new.to_i}\n" #shouldnt ever be false
         conversation_array.each do |var|
           puts "sending: #{var}"
           self.writer.write "#{var}\n"
-          puts self.reader.gets
+          verify = self.reader.gets
+          puts verify
+          #redo if verify != "ack#{var}\n" ############ need to verify data got through in different way
         end
       end
     rescue Timeout::Error => e
@@ -162,6 +162,28 @@ class ProcessMaker
         raise e
       end
     end
+  end
+
+  def self.child_converstation(reader, writer, quantity)
+    return_val = Array.new
+    begin
+     status = Timeout::timeout(5) do
+      begin 
+        hash = reader.gets 
+        puts "hash: #{hash}"
+      end while hash.to_i != Time.now.to_i
+      writer.write "ack#{Time.new.to_i}\n"
+      quantity.times do
+        verify = reader.gets
+        return_val << verify
+        writer.write "ack#{verify}"
+      end
+    end
+  rescue Timeout::Error => e
+    $stderr.puts "failed to connect parent"
+    retry
+    raise e
+  end
   end
 end
 
@@ -241,9 +263,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   puts 'Conversation test suite'
   tester = ProcessMaker.new("conversationtest.rb", true)
   puts tester.info
-  count = 0
-  tries = 0
-  LPS.interval(6).loop do
+  LPS.interval(4).loop do
     # begin
     #   status = Timeout::timeout(1) do
     #     if count == 3 || count == 4 || count == 6
@@ -272,7 +292,7 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
     #     raise e
     #   end
     # end
-    tester.conversation ["status#{count}","threshold#{count}","frequency#{count}"]
+    tester.parent_conversation ["status","threshold","frequency"]
     # sleep 10
   end
 end
