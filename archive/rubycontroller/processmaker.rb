@@ -74,8 +74,6 @@ class ProcessMaker
     reader.sync = true
     writer.sync = true
     new_stderr.sync = true
-    reader.sync = true
-    writer.sync = true
     $stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
