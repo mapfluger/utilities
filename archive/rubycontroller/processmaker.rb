@@ -67,14 +67,16 @@ class ProcessMaker
   def self.child_process_connect
     fail "No args!" if ARGV.length < 1
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect1: #{f.fileno}" if  !f.closed? && f.fileno > 2}
-    puts ARGV
     puts "ARGV: #{ARGV.last.to_s.split(',')[0].to_i}, #{ARGV.last.to_s.split(',')[1].to_i}, #{ARGV.last.to_s.split(',')[2].to_i}"
     reader = IO.new(ARGV.last.to_s.split(',')[0].to_i)
     writer  = IO.new(ARGV.last.to_s.split(',')[1].to_i)
     new_stderr  = IO.new(ARGV.last.to_s.split(',')[2].to_i)
     reader.sync = true
     writer.sync = true
-    #$stderr.reopen(new_stderr)
+    new_stderr.sync = true
+    reader.sync = true
+    writer.sync = true
+    $stderr.reopen(new_stderr)
     ObjectSpace.each_object(IO) { |f| puts "sub_process_connect2: #{f.fileno}" if  !f.closed? && f.fileno > 2}
     from_parent = reader.gets
     puts from_parent
@@ -129,6 +131,38 @@ class ProcessMaker
     @info[:active] = false
     return true
   end
+
+  def conversation(conversation_array)
+    tries = 0
+    begin
+      status = Timeout::timeout(1) do
+        puts "start"
+      #  begin
+          self.writer.write "#{Time.new.to_i}\n"
+          verify = self.reader.gets
+          puts "verify: #{verify}"
+       # end while verify != "#{Time.new.to_i}ack\n"
+        puts "success"
+        conversation_array.each do |var|
+          puts "sending: #{var}"
+          self.writer.write "#{var}\n"
+          puts self.reader.gets
+        end
+      end
+    rescue Timeout::Error => e
+      $stderr.puts "failed to connect to child for #{self.info[:name]}, #{self.info[:pid]}"
+      self.writer.write "#{Time.new.to_i}\n"
+      tries += 1
+      puts "tries #{tries}"
+      if tries <= 10
+        puts "tries #{tries}"
+        retry
+      else
+        self.close # probably restart in practice
+        raise e
+      end
+    end
+  end
 end
 
 # test code!
@@ -137,7 +171,7 @@ if $PROGRAM_NAME == __FILE__ && ARGV.length == 0
   #include ProcessMaker
   return_values1 = ProcessMaker.new("childprocesstest.rb")
   puts return_values1.info
-  reader, writer = return_values1.parent_process_connect  # example of parent connections
+  reader, writer = return_values1.parent_process_connect  # example of parent connections if you need their objects seperately, prefer obj.pipe
   # puts "reader autoclose: #{reader.autoclose?}"
   return_values2 = ProcessMaker.new("childprocesstest.rb", true)
   puts return_values2.info
@@ -209,35 +243,36 @@ elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   puts tester.info
   count = 0
   tries = 0
-  LPS.interval(4).loop do
-    begin
-      status = Timeout::timeout(1) do
-        if count == 3 || count == 4 || count == 6
-          tester.writer.write "#{Time.new.to_i + 3}\n"
-        else
-          tester.writer.write "#{Time.new.to_i}\n"
-        end
-        puts = tester.reader.gets
-        tester.writer.write "status#{count}\n"
-        puts tester.reader.gets
-        tester.writer.write "threshold#{count}\n"
-        puts tester.reader.gets
-        tester.writer.write "frequency#{count}\n"
-        puts tester.reader.gets
-        count += 1
-      end
-    rescue Timeout::Error => e
-      $stderr.puts "failed to connect to child for #{tester.info[:name]}, #{tester.info[:pid]}"
-      tester.writer.write "#{Time.new.to_i}\n"
-      tries += 1
-      if tries <= 10
-        puts "tries #{tries}"
-        retry
-      else
-        tester.close # probably restart in practice
-        raise e
-      end
-    end
+  LPS.interval(6).loop do
+    # begin
+    #   status = Timeout::timeout(1) do
+    #     if count == 3 || count == 4 || count == 6
+    #       tester.writer.write "#{Time.new.to_i + 3}\n"
+    #     else
+    #       tester.writer.write "#{Time.new.to_i}\n"
+    #     end
+    #     puts tester.reader.gets
+    #     tester.writer.write "status#{count}\n"
+    #     puts tester.reader.gets
+    #     tester.writer.write "threshold#{count}\n"
+    #     puts tester.reader.gets
+    #     tester.writer.write "frequency#{count}\n"
+    #     puts tester.reader.gets
+    #     count += 1
+    #   end
+    # rescue Timeout::Error => e
+    #   $stderr.puts "failed to connect to child for #{tester.info[:name]}, #{tester.info[:pid]}"
+    #   tester.writer.write "#{Time.new.to_i}\n"
+    #   tries += 1
+    #   if tries <= 10
+    #     puts "tries #{tries}"
+    #     retry
+    #   else
+    #     tester.close # probably restart in practice
+    #     raise e
+    #   end
+    # end
+    tester.conversation ["status#{count}","threshold#{count}","frequency#{count}"]
     # sleep 10
   end
 end

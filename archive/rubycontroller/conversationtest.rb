@@ -10,13 +10,18 @@ while true do
     status = Timeout::timeout(5) do
       begin 
         hash = reader.gets 
+        puts "hash: #{hash}"
       end while hash.to_i != Time.now.to_i
-      writer.write "1ack#{count}\n"
-      puts reader.gets
+      #puts "hash" + reader.gets
+      writer.write "#{Time.new.to_i}ack\n"
+      #puts "ack2" + reader.gets
+      puts "ack2!" + reader.gets
       writer.write "2ack#{count}\n"
-      puts reader.gets
+      #puts "ack3" + reader.gets
+      puts "ack3!" + reader.gets
       writer.write "3ack#{count}\n"
-      puts reader.gets
+      #puts "ack4" + reader.gets
+      puts "ack4!" + reader.gets
       writer.write "4ack#{count}\n"
       count += 1
     end
