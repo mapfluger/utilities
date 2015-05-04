@@ -89,7 +89,7 @@ class ProcessMaker
 
   def restart_child(signal = 9)
     self.close(signal)
-    ProcessMaker.new @info[:name]
+    ProcessMaker.new @info[:name], @info[:keep_alive]
   end
 
   def close(signal = 9)
@@ -137,13 +137,13 @@ class ProcessMaker
         begin
           self.writer.write "#{Time.new.to_i}\n"
           verify = self.reader.gets
-          puts "verify: #{verify}"
+          #puts "verify: #{verify}"
         end while verify != "ack#{Time.new.to_i}\n" #shouldnt ever be false
         conversation_array.each do |var|
-          puts "sending: #{var}"
+          #puts "sending: #{var}"
           self.writer.write "#{var}\n"
           verify = self.reader.gets
-          puts verify
+          #puts verify
           #redo if verify != "ack#{var}\n" ############ need to verify data got through in different way
         end
       end
@@ -168,7 +168,7 @@ class ProcessMaker
       status = Timeout::timeout(timeout_val) do
         begin
           time = reader.gets
-          puts "time: #{time}"
+          #puts "time: #{time}"
         end while time.to_i != Time.now.to_i
         writer.write "ack#{Time.new.to_i}\n"
         quantity.times do
@@ -260,38 +260,30 @@ if $PROGRAM_NAME == __FILE__ && ARGV.length == 0
 elsif $PROGRAM_NAME == __FILE__ && ARGV.length != 0
   require 'lps'
   puts 'Conversation test suite'
-  tester = ProcessMaker.new("conversationtest.rb", true)
-  puts tester.info
+  tester1 = ProcessMaker.new("conversationtest.rb", true)
+  tester2 = ProcessMaker.new("conversationtest.rb", true)
+  tester3 = ProcessMaker.new("conversationtest.rb", true)
+  tester4 = ProcessMaker.new("conversationtest.rb", true)
+  tester5 = ProcessMaker.new("conversationtest.rb", true)
+  tester6 = ProcessMaker.new("conversationtest.rb", true)
+  tester7 = ProcessMaker.new("conversationtest.rb", true)
+  tester8 = ProcessMaker.new("conversationtest.rb", true)
+  tester9 = ProcessMaker.new("conversationtest.rb", true)
+  tester10 = ProcessMaker.new("conversationtest.rb", true)
+  tester11 = ProcessMaker.new("conversationtest.rb", true)
+  tester12 = ProcessMaker.new("conversationtest.rb", true)
   LPS.interval(4).loop do
-    # begin
-    #   status = Timeout::timeout(1) do
-    #     if count == 3 || count == 4 || count == 6
-    #       tester.writer.write "#{Time.new.to_i + 3}\n"
-    #     else
-    #       tester.writer.write "#{Time.new.to_i}\n"
-    #     end
-    #     puts tester.reader.gets
-    #     tester.writer.write "status#{count}\n"
-    #     puts tester.reader.gets
-    #     tester.writer.write "threshold#{count}\n"
-    #     puts tester.reader.gets
-    #     tester.writer.write "frequency#{count}\n"
-    #     puts tester.reader.gets
-    #     count += 1
-    #   end
-    # rescue Timeout::Error => e
-    #   $stderr.puts "failed to connect to child for #{tester.info[:name]}, #{tester.info[:pid]}"
-    #   tester.writer.write "#{Time.new.to_i}\n"
-    #   tries += 1
-    #   if tries <= 10
-    #     puts "tries #{tries}"
-    #     retry
-    #   else
-    #     tester.close # probably restart in practice
-    #     raise e
-    #   end
-    # end
-    tester.parent_conversation ["status","threshold","frequency"]
-    # sleep 10
+    tester1.parent_conversation ["status1","threshold1","frequency1"]
+    tester2.parent_conversation ["status2","threshold2","frequency2"]
+    tester3.parent_conversation ["status3","threshold3","frequency3"]
+    tester4.parent_conversation ["status4","threshold4","frequency4"]
+    tester5.parent_conversation ["status5","threshold5","frequency5"]
+    tester6.parent_conversation ["status6","threshold6","frequency6"]
+    tester7.parent_conversation ["status7","threshold7","frequency7"]
+    tester8.parent_conversation ["status8","threshold8","frequency8"]
+    tester9.parent_conversation ["status9","threshold9","frequency9"]
+    tester10.parent_conversation ["status10","threshold10","frequency10"]
+    tester11.parent_conversation ["status11","threshold11","frequency11"]
+    tester12.parent_conversation ["status12","threshold12","frequency12"]
   end
 end
